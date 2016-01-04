@@ -16,6 +16,8 @@ node_modules:
 	npm install
 
 $(BIN): $(ELMSRC) $(JSSRC)
+	# i feel like the compiler should just support making something
+	# a script
 	$(ELM) $(MAIN) --output $(BIN)
 	echo "Elm.worker(Elm.Main);" >> $(BIN)
 
