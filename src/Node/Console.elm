@@ -1,4 +1,4 @@
-module Console (log, error, fatal, stdin) where
+module Node.Console (log, error, fatal, stdin) where
 
 {-| Console
 
