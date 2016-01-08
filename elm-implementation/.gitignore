@@ -2,5 +2,3 @@ build/
 elm-stuff/
 node_modules/
 *.swp
-*.pyc
-seeker.egg-info/
