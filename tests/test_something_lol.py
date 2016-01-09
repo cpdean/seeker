@@ -56,3 +56,9 @@ def test_simple_missing():
     with pytest.raises(seeker.CannotFindIdentifier):
         location = seeker.find_location(missing, 4, 27, "splitter")
         assert location == (5, 0)
+
+
+def test_get_dependencies_of_project(tmpdir):
+    package = tmpdir.join("elm-package.json")
+    package.write("sup")
+    assert package.read() == "sup"
