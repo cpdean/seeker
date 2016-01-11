@@ -41,17 +41,18 @@ def find_location(path, source_path, line, col, identifier):
     with open(source_path) as s:
         source = s.read()
     try:
-        return find_location_in_source(source, line, col, identifier)
+        row, col = find_location_in_source(source, line, col, identifier)
+        return source_path, row, col
     except CannotFindIdentifier:
-        print("could not find in {}".format(source_path))
         for m in modules_to_search(source, line, col, identifier):
             paths = files_of(m, path)
             for p in paths:
                 with open(p) as m:
                     try:
-                        return find_location_in_source(
+                        row, col = find_location_in_source(
                             m.read(), line, col, identifier
                         )
+                        return source_path, row, col
                     except CannotFindIdentifier:
                         print("could not find in {}".format(p))
     # well you got this far...
@@ -205,8 +206,18 @@ def files_of(module, package_root, depth=1):
 
 
 def main():
-    path = "src/Seeker.elm"
-    print(find_location(".", path, 17, 18, "test"))
+    import sys
+    try:
+        bin, cwd, path, row, col, identifier = sys.argv
+    except ValueError:
+        print("USAGE: seeker CWD FILE ROW COLUMN IDENTIFIER")
+        print("you gave {}".format(sys.argv[1:]))
+        exit(1)
+    # path = "src/Seeker.elm"
+    # print(find_location(".", path, 17, 18, "test"))
+    print(" ".join(
+        map(str, find_location(cwd, path, int(row), int(col), identifier))
+    ))
 
 
 if __name__ == '__main__':
