@@ -1,5 +1,7 @@
 import seeker
 import pytest
+import mock
+import json
 
 regular = """
 import List
@@ -18,7 +20,7 @@ def test_tokens_wow():
 
 
 def test_find_origin():
-    location = seeker.find_location(regular, 8, 27, "splitter")
+    location = seeker.find_location_in_source(regular, 8, 27, "splitter")
     assert location == (5, 0)
 
 
@@ -39,7 +41,7 @@ b input = String.join "." (splitter input)
 
 def test_too_many_should_fail():
     with pytest.raises(seeker.SearchError):
-        location = seeker.find_location(too_many, 10, 27, "splitter")
+        location = seeker.find_location_in_source(too_many, 10, 27, "splitter")
         assert location == (5, 0)
 
 
@@ -54,11 +56,176 @@ b input = String.join "." (splitter input)
 
 def test_simple_missing():
     with pytest.raises(seeker.CannotFindIdentifier):
-        location = seeker.find_location(missing, 4, 27, "splitter")
+        location = seeker.find_location_in_source(missing, 4, 27, "splitter")
         assert location == (5, 0)
 
 
+package_json = """
+{
+    "version": "0.0.1",
+    "summary": "datastructures",
+    "repository": "https://github.com/user/project.git",
+    "license": "MIT",
+    "source-directories": [
+        "src"
+    ],
+    "exposed-modules": [
+        "Seeker"
+    ],
+    "native-modules": true,
+    "dependencies": {
+        "deadfoxygrandpa/elm-test": "3.0.1 <= v < 4.0.0",
+        "elm-lang/core": "3.0.0 <= v < 4.0.0",
+        "laszlopandy/elm-console": "1.0.3 <= v < 2.0.0"
+    },
+    "elm-version": "0.16.0 <= v < 0.17.0"
+}
+"""
+
+
 def test_get_dependencies_of_project(tmpdir):
-    package = tmpdir.join("elm-package.json")
-    package.write("sup")
-    assert package.read() == "sup"
+    assert sorted(seeker.dependencies(json.loads(package_json))) == [
+        ("deadfoxygrandpa", "elm-test"),
+        ("elm-lang", "core"),
+        ("laszlopandy", "elm-console")
+    ]
+
+
+def test_get_modules_of_package(tmpdir):
+    assert seeker.modules_of(json.loads(package_json)) == [
+        "Seeker"
+    ]
+
+
+@pytest.mark.skipif("True")
+def test_fn_is_defined_in_my_package():
+    pass
+
+
+@pytest.mark.skipif("True")
+def test_fn_is_in_another_package():
+    pass
+
+
+@pytest.mark.skipif("True")
+def test_fn_is_defined_through_two_files():
+    pass
+
+
+def test_get_imported_packages():
+    assert seeker.imported_packages(regular) == ["List", "String"]
+
+
+def get_file_path_to_module():
+    """
+    for a given module name in a project, traverse through
+    the elm-stuff dir to the file that defines the module.
+    """
+    pass
+
+
+qualified = """
+import List
+import String
+
+splitter : String -> List String
+splitter = String.split " "
+
+b : String -> String
+b input = String.join "." (splitter input)
+"""
+
+
+@pytest.mark.skipif("True")
+def test_query_string_when_qualified(monkeypatch):
+    m = mock.Mock()
+    monkeypatch.setattr(seeker, 'def_of', m)
+    seeker.find_location(".", qualified, 8, 17, "join")
+    assert m.called
+
+
+@pytest.mark.skipif("True")
+def test_module_lister_works_with_qualified():
+    assert seeker.modules_to_search(qualified, 8, 17, "join") == "String"
+
+
+exposing = """
+import List
+import String exposing (join)
+
+splitter : String -> List String
+splitter = String.split " "
+
+b : String -> String
+b input = join "." (splitter input)
+"""
+
+
+def test_module_lister_works_with_exposed():
+    assert seeker.modules_to_search(exposing, 8, 10, "join") == ["String"]
+
+
+@pytest.mark.parametrize(
+    "line",
+    [
+        "import String exposing (join)",
+        "import String exposing (join, womp)",
+        "import String exposing (womp, join, womp)",
+        "import String exposing (womp, join)",
+    ])
+def test_importer_finder(line):
+    fn = "join"
+    match = seeker._imports_function(line, fn)
+    importer, = match.groups()
+    assert importer == "String"
+
+
+def test_importer_finder_doesnt_match_substr():
+    line = "import Wumpus exposing (ajoinb)"
+    fn = "join"
+    match = seeker._imports_function(line, fn)
+    assert match is None
+
+
+@pytest.mark.skipif("True")
+def test_query_string_when_exposing_qualified():
+    pass
+
+
+wildcard = """
+import List
+import String exposing (..)
+
+splitter : String -> List String
+splitter = String.split " "
+
+b : String -> String
+b input = join "." (splitter input)
+"""
+
+
+@pytest.mark.skipif("True")
+def test_module_lister_works_with_wildcarded():
+    assert seeker.modules_to_search(wildcard, 8, 11, "join") == "String"
+
+
+@pytest.mark.skipif("True")
+def test_query_string_when_wild_carded():
+    pass
+
+
+wildcard2 = """
+import List exposing (..)
+import String exposing (..)
+
+splitter : String -> List String
+splitter = String.split " "
+
+b : String -> String
+b input = String.join "." (splitter input)
+"""
+
+
+@pytest.mark.skipif("True")
+def test_query_string_when_there_are_two_wildcards():
+    pass
