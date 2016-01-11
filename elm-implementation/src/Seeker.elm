@@ -7,6 +7,18 @@ module Seeker (tests) where
 
 import ElmTest
 import Native.Core
+import List
+import String
+
+
+wordCount : String -> Int
+wordCount s =
+    List.length (words s)
+
+
+words : String -> List String
+words s =
+    String.split " " s
 
 
 {-| functional tests for the top level module
