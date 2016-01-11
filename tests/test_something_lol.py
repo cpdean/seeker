@@ -15,12 +15,25 @@ b input = String.join "." (splitter input)
 """
 
 
-def test_tokens_wow():
-    assert type(regular) == str
-
-
 def test_find_origin():
     location = seeker.find_location_in_source(regular, 8, 27, "splitter")
+    assert location == (5, 0)
+
+
+with_argument = """
+import List
+import String
+
+splitter : String -> List String
+splitter s = String.split " "
+
+b : String -> String
+b input = String.join "." (splitter input)
+"""
+
+
+def test_find_when_def_has_arg():
+    location = seeker.find_location_in_source(with_argument, 8, 27, "splitter")
     assert location == (5, 0)
 
 
