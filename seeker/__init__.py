@@ -34,19 +34,28 @@ def find_location_in_source(source, line, col, identifier):
     return defs[0]
 
 
-def find_location(path, source, line, col, identifier):
+def find_location(path, source_path, line, col, identifier):
     """
-    assume source is a string
-
-    maybe should be a file
+    source is path to file
     """
+    with open(source_path) as s:
+        source = s.read()
     try:
-        find_location_in_source(source, line, col, identifier)
+        return find_location_in_source(source, line, col, identifier)
     except CannotFindIdentifier:
+        print("could not find in {}".format(source_path))
         for m in modules_to_search(source, line, col, identifier):
             paths = files_of(m, path)
             for p in paths:
-                return find_location_in_source(source, line, col, identifier)
+                with open(p) as m:
+                    try:
+                        return find_location_in_source(
+                            m.read(), line, col, identifier
+                        )
+                    except CannotFindIdentifier:
+                        print("could not find in {}".format(p))
+    # well you got this far...
+    raise CannotFindIdentifier("sorry")
 
 
 def _imports_function(line, identifier):
@@ -59,6 +68,10 @@ def _imports_function(line, identifier):
         ).format(identifier),
         line
     )
+
+
+def _wildcard_import(line):
+    return re.match(r"^import (\w+) exposing \(\.\.\)", line)
 
 
 def modules_to_search(source, line, col, identifier):
@@ -84,8 +97,9 @@ def modules_to_search(source, line, col, identifier):
     modules = [i.groups()[0] for i in importers if i]
     if len(modules) > 0:
         return modules
-
-
+    # if nothing obvious is left, do all wildcards
+    wild = [_wildcard_import(i) for i in source.split("\n")]
+    return [i.groups()[0] for i in wild if i]
 
 
 def dependencies(package_json):
@@ -174,7 +188,6 @@ def files_of(module, package_root, depth=1):
         os.path.join(package_root, s)
         for s in package_json["source-directories"]
     ]
-    print("searching through {}".format(sources))
     paths = [
         os.path.join(s, package_file)
         for s in sources
@@ -184,7 +197,6 @@ def files_of(module, package_root, depth=1):
         # TODO: could probably just do a set() compression at
         #       the end but whatever
         for dep_path in dependency_roots(package_root):
-            print('searching ' + dep_path)
             module_paths = files_of(module, dep_path, depth=depth-1)
             paths += module_paths
     if len(paths) > 1:
@@ -193,4 +205,9 @@ def files_of(module, package_root, depth=1):
 
 
 def main():
-    print(files_of("String", "."))
+    path = "src/Seeker.elm"
+    print(find_location(".", path, 17, 18, "test"))
+
+
+if __name__ == '__main__':
+    main()

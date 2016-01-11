@@ -97,21 +97,6 @@ def test_get_modules_of_package(tmpdir):
     ]
 
 
-@pytest.mark.skipif("True")
-def test_fn_is_defined_in_my_package():
-    pass
-
-
-@pytest.mark.skipif("True")
-def test_fn_is_in_another_package():
-    pass
-
-
-@pytest.mark.skipif("True")
-def test_fn_is_defined_through_two_files():
-    pass
-
-
 def test_get_imported_packages():
     assert seeker.imported_packages(regular) == ["List", "String"]
 
@@ -204,14 +189,8 @@ b input = join "." (splitter input)
 """
 
 
-@pytest.mark.skipif("True")
 def test_module_lister_works_with_wildcarded():
-    assert seeker.modules_to_search(wildcard, 8, 11, "join") == "String"
-
-
-@pytest.mark.skipif("True")
-def test_query_string_when_wild_carded():
-    pass
+    assert seeker.modules_to_search(wildcard, 8, 11, "join") == ["String"]
 
 
 wildcard2 = """
@@ -222,10 +201,10 @@ splitter : String -> List String
 splitter = String.split " "
 
 b : String -> String
-b input = String.join "." (splitter input)
+b input = join "." (splitter input)
 """
 
 
-@pytest.mark.skipif("True")
 def test_query_string_when_there_are_two_wildcards():
-    pass
+    modules = seeker.modules_to_search(wildcard2, 8, 10, "join")
+    assert modules == ["List", "String"]
