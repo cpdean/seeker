@@ -9,6 +9,7 @@ import ElmTest
 import Native.Core
 import List
 import String
+import Maybe
 
 
 wordCount : String -> Int
@@ -19,6 +20,10 @@ wordCount s =
 words : String -> List String
 words s =
     String.split " " s
+
+
+dunno =
+    Maybe.andThen
 
 
 {-| functional tests for the top level module

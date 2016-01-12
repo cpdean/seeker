@@ -49,12 +49,16 @@ def find_location(path, source_path, line, col, identifier):
     """
     source is path to file
     """
+    log.debug("searching in {}".format(source_path))
     with open(source_path) as s:
         source = s.read()
     try:
+        this_line = source.split("\n")[line]
+        assert identifier in this_line, "{} should be in '{}'".format(identifier, this_line)  # NOQA
         row, col = find_location_in_source(source, line, col, identifier)
         return source_path, row, col
     except CannotFindIdentifier:
+        log.debug("cannot find in this file, looking for modules here")
         for m in modules_to_search(source, line, col, identifier):
             log.debug("looking for path to {}".format(m))
             paths = files_of(m, path)
@@ -103,6 +107,9 @@ def modules_to_search(source, line, col, identifier):
     # check if identifier is qualified, if it's
     # like "String.join" instead of just "join"
     lines = source.split("\n")
+    log.debug("why the hell does this not have it")
+    for i, lin in enumerate(lines[line-5:line+5]):
+        log.debug("{} : |{}".format(i - 5, lin))
     line_of_id = lines[line]
     try:
         just_before_id = line_of_id[col - 1]
@@ -238,7 +245,9 @@ def files_of(module, package_root, depth=1):
 
 
 def main():
-    logging.basicConfig()
+    debug = False
+    level = logging.DEBUG if debug else logging.ERROR
+    logging.basicConfig(level=level)
     import sys
     try:
         bin, cwd, path, row, col, identifier = sys.argv

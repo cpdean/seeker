@@ -77,6 +77,36 @@ def test_too_many_should_fail():
         assert location == (5, 0)
 
 
+too_many = """
+import List
+import String
+
+{-| this def is offset and in a comment:
+    splitter : String -> List String
+    splitter = String.split " "
+-}
+
+splitter : String -> List String
+splitter = String.split " "
+
+b : String -> String
+b input = String.join "." (splitter input)
+"""
+
+
+def test_comment_should_hide_multiple_defs():
+    """
+    TODO: failing test, the def is both indented and in a comment
+
+    some of elm-lang/core does this to express how things work in their docs
+    while i could filter based on how its indented, that doesn't guarantee
+    some docs may not do that. if a def is ingored by the compiler in a comment,
+    it should be ignored in this tool
+    """
+    location = seeker.find_location_in_source(too_many, 10, 27, "splitter")
+    assert location == (5, 0)
+
+
 missing = """
 import List
 import String
