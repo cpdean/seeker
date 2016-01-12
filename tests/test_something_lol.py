@@ -25,7 +25,7 @@ import List
 import String
 
 splitter : String -> List String
-splitter s = String.split " "
+splitter s = String.split " " s
 
 b : String -> String
 b input = String.join "." (splitter input)
@@ -35,6 +35,25 @@ b input = String.join "." (splitter input)
 def test_find_when_def_has_arg():
     location = seeker.find_location_in_source(with_argument, 8, 27, "splitter")
     assert location == (5, 0)
+
+
+@pytest.mark.parametrize(
+    "line",
+    [
+        'splitter = String.split " "',
+        'splitter s = String.split " " s',
+        'splitter whatabout = String.split " " whatabout',
+        'splitter s a = String.split " " s a',
+        'splitter more a = String.split " " more a',
+        'splitter more a third = String.split " " more a third',
+    ])
+def test_indentifier_searcher(line):
+    """
+    let's hope this doesn't match on let blocks, lol
+    """
+    identifier = "splitter"
+    match = seeker._id_regex_from(identifier)(line)
+    assert bool(match) is True
 
 
 too_many = """

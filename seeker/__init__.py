@@ -2,6 +2,9 @@ from __future__ import print_function
 import os
 import re
 import json
+import logging
+
+log = logging.getLogger(__name__)
 
 
 class CannotFindIdentifier(Exception):
@@ -12,17 +15,25 @@ class SearchError(Exception):
     pass
 
 
+def _id_regex_from(identifier):
+    _regex = re.compile(identifier + r"\s+(\w+\s)*=")
+
+    def fn(line):
+        return _regex.search(line)
+    return fn
+
+
 def find_location_in_source(source, line, col, identifier):
     """
     assume source is a string
 
     maybe should be a file
     """
-    id_regex = re.compile(identifier + r"\s+=")
+    id_regex = _id_regex_from(identifier)
     defs = []
     lines = source.split("\n")
     for ix, line in enumerate(lines):
-        found = id_regex.search(line)
+        found = id_regex(line)
         if found:
             defs.append((ix, found.start()))
     if len(defs) == 0:
@@ -45,14 +56,16 @@ def find_location(path, source_path, line, col, identifier):
         return source_path, row, col
     except CannotFindIdentifier:
         for m in modules_to_search(source, line, col, identifier):
+            log.debug("looking for path to {}".format(m))
             paths = files_of(m, path)
             for p in paths:
+                log.debug("checking {}".format(p))
                 with open(p) as m:
                     try:
                         row, col = find_location_in_source(
                             m.read(), line, col, identifier
                         )
-                        return source_path, row, col
+                        return p, row, col
                     except CannotFindIdentifier:
                         print("could not find in {}".format(p))
     # well you got this far...
@@ -89,18 +102,37 @@ def modules_to_search(source, line, col, identifier):
 
     # check if identifier is qualified, if it's
     # like "String.join" instead of just "join"
-    if source.split("\n")[line][col - 1] == ".":
+    lines = source.split("\n")
+    line_of_id = lines[line]
+    try:
+        just_before_id = line_of_id[col - 1]
+    except IndexError:
+        print({
+            "line_of_id": line_of_id,
+            "line": line,
+            "col": col,
+            "identifier": identifier
+        })
+        raise
+    if just_before_id == ".":
         until = source.split("\n")[line][:col - 1]
         module = re.match(r"^.*?(\w*)$", until).groups()[0]
+        log.debug("searching qualified import")
+        log.debug([module])
         return [module]
     # search for explicit import
     importers = [_imports_function(i, identifier) for i in source.split("\n")]
     modules = [i.groups()[0] for i in importers if i]
     if len(modules) > 0:
+        log.debug("searching exposing imports")
+        log.debug(modules)
         return modules
     # if nothing obvious is left, do all wildcards
     wild = [_wildcard_import(i) for i in source.split("\n")]
-    return [i.groups()[0] for i in wild if i]
+    mods = [i.groups()[0] for i in wild if i]
+    log.debug("searching wildcard imports")
+    log.debug(mods)
+    return mods
 
 
 def dependencies(package_json):
@@ -206,6 +238,7 @@ def files_of(module, package_root, depth=1):
 
 
 def main():
+    logging.basicConfig()
     import sys
     try:
         bin, cwd, path, row, col, identifier = sys.argv
