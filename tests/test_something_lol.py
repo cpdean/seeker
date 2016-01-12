@@ -100,7 +100,7 @@ def test_comment_should_hide_multiple_defs():
 
     some of elm-lang/core does this to express how things work in their docs
     while i could filter based on how its indented, that doesn't guarantee
-    some docs may not do that. if a def is ingored by the compiler in a comment,
+    some docs may not do that. if a def is ingored by the compiler in a comment
     it should be ignored in this tool
     """
     location = seeker.find_location_in_source(too_many, 10, 27, "splitter")
@@ -237,6 +237,21 @@ def test_importer_finder_doesnt_match_substr():
 @pytest.mark.skipif("True")
 def test_query_string_when_exposing_qualified():
     pass
+
+
+def test_module_lister_searches_nested_module():
+    """
+    example, ElmTest.Assert.assertEqual, should jump in that folder to
+    look at that file
+    """
+    assert False
+
+
+def test_module_lister_searches_Native_js():
+    """
+    at worst it should at least give a meaningful error
+    """
+    assert False
 
 
 wildcard = """
