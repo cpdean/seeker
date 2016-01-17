@@ -31,7 +31,8 @@ def find_location_in_source(source, line, col, identifier):
     """
     id_regex = _id_regex_from(identifier)
     defs = []
-    lines = source.split("\n")
+    masked = _mask_comments(source)
+    lines = masked.split("\n")
     for ix, line in enumerate(lines):
         found = id_regex(line)
         if found:
@@ -242,6 +243,41 @@ def files_of(module, package_root, depth=1):
     if len(paths) > 1:
         raise RuntimeError("too many matches!!! :((((: {}".format(paths))
     return paths
+
+
+def _mask_comments(src):
+
+    """
+    erase content of comments so they stop matching in my search
+    results
+    """
+
+    enter_comment_block = "{-"
+    exit_comment_block = "-}"
+    # enter_comment_line = "--"
+    # exit_comment_line = "\n"
+    newline = re.compile(r'\n')
+
+    comment_mode = []  # push/pop states, only out of comment mode when empty
+    out = []
+    for i in range(len(src)):
+        # using slice + 2 width to get a sliding window
+        this_chunk = src[i:i+2]
+        if this_chunk == enter_comment_block:
+            comment_mode.append(enter_comment_block)
+            out.append(enter_comment_block[0])
+            continue
+        if this_chunk == exit_comment_block:
+            comment_mode.pop()
+        # reproduce source
+        if len(comment_mode) > 0:
+            if newline.match(this_chunk[0]):
+                out.append(this_chunk[0])
+            else:
+                out.append("-")
+        else:
+            out.append(this_chunk[0])
+    return "".join(out)
 
 
 def main():

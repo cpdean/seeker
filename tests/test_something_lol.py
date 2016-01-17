@@ -3,6 +3,8 @@ import pytest
 import mock
 import json
 
+todo = True
+
 regular = """
 import List
 import String
@@ -77,7 +79,7 @@ def test_too_many_should_fail():
         assert location == (5, 0)
 
 
-too_many = """
+extra_def_in_comment = """
 import List
 import String
 
@@ -103,8 +105,10 @@ def test_comment_should_hide_multiple_defs():
     some docs may not do that. if a def is ingored by the compiler in a comment
     it should be ignored in this tool
     """
-    location = seeker.find_location_in_source(too_many, 10, 27, "splitter")
-    assert location == (5, 0)
+    location = seeker.find_location_in_source(
+        extra_def_in_comment, 10, 27, "splitter"
+    )
+    assert location == (10, 0)
 
 
 missing = """
@@ -239,6 +243,7 @@ def test_query_string_when_exposing_qualified():
     pass
 
 
+@pytest.mark.skipif("todo == True")
 def test_module_lister_searches_nested_module():
     """
     example, ElmTest.Assert.assertEqual, should jump in that folder to
@@ -247,6 +252,7 @@ def test_module_lister_searches_nested_module():
     assert False
 
 
+@pytest.mark.skipif("todo == True")
 def test_module_lister_searches_Native_js():
     """
     at worst it should at least give a meaningful error
@@ -285,3 +291,44 @@ b input = join "." (splitter input)
 def test_query_string_when_there_are_two_wildcards():
     modules = seeker.modules_to_search(wildcard2, 8, 10, "join")
     assert modules == ["List", "String"]
+
+
+def test_mask_comments():
+    before = """
+    import List exposing (..)
+    import String exposing (..)
+
+    {-| these comments should be removed
+
+        splitter : String -> List String
+        splitter = String.split " "
+
+    lol
+    -}
+
+    splitter : String -> List String
+    splitter = String.split " "
+
+    b : String -> String
+    b input = join "." (splitter input)
+    """
+
+    after = """
+    import List exposing (..)
+    import String exposing (..)
+
+    {-----------------------------------
+
+----------------------------------------
+-----------------------------------
+
+-------
+-----}
+
+    splitter : String -> List String
+    splitter = String.split " "
+
+    b : String -> String
+    b input = join "." (splitter input)
+    """
+    assert seeker._mask_comments(before) == after
