@@ -243,6 +243,16 @@ def test_query_string_when_exposing_qualified():
     pass
 
 
+@pytest.mark.parametrize(
+    "chopped,expected", [
+        ("regular name String", "String"),
+        ("nested ElmTest.Assertion", "ElmTest.Assertion"),
+        ("double nest SomethingElse.ElmTest.Assertion", "SomethingElse.ElmTest.Assertion")  # NOQA
+    ])
+def test_name_getter(chopped, expected):
+    assert seeker._module_name_at_end_of(chopped) == expected
+
+
 @pytest.mark.skipif("todo == True")
 def test_module_lister_searches_nested_module():
     """

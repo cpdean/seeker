@@ -53,28 +53,31 @@ def find_location(path, source_path, line, col, identifier):
     log.debug("searching in {}".format(source_path))
     with open(source_path) as s:
         source = s.read()
-    try:
-        this_line = source.split("\n")[line]
-        assert identifier in this_line, "{} should be in '{}'".format(identifier, this_line)  # NOQA
+    this_line = source.split("\n")[line]
+    assert identifier in this_line, "{} should be in '{}'".format(identifier, this_line)  # NOQA
+    # changed this to search external first
+    # because of :
+    # module_fn = ExternalMod.module_fn
+    modules = modules_to_search(source, line, col, identifier)
+    for m in modules:
+        log.debug("looking for path to {}".format(m))
+        paths = files_of(m, path)
+        for p in paths:
+            log.debug("checking {}".format(p))
+            with open(p) as m:
+                try:
+                    row, col = find_location_in_source(
+                        m.read(), line, col, identifier
+                    )
+                    return [p, row, col]
+                except CannotFindIdentifier:
+                    print("could not find in {}".format(p))
+    if len(modules) == 0:
+        log.debug("looking in the file function is used in")
         row, col = find_location_in_source(source, line, col, identifier)
-        return source_path, row, col
-    except CannotFindIdentifier:
-        log.debug("cannot find in this file, looking for modules here")
-        for m in modules_to_search(source, line, col, identifier):
-            log.debug("looking for path to {}".format(m))
-            paths = files_of(m, path)
-            for p in paths:
-                log.debug("checking {}".format(p))
-                with open(p) as m:
-                    try:
-                        row, col = find_location_in_source(
-                            m.read(), line, col, identifier
-                        )
-                        return p, row, col
-                    except CannotFindIdentifier:
-                        print("could not find in {}".format(p))
-    # well you got this far...
-    raise CannotFindIdentifier("sorry")
+        return [source_path, row, col]
+    raise CannotFindIdentifier(
+        "could not find {} in here".format(identifier))
 
 
 def _imports_function(line, identifier):
@@ -93,16 +96,15 @@ def _wildcard_import(line):
     return re.match(r"^import (\w+) exposing \(\.\.\)", line)
 
 
+def _module_name_at_end_of(chopped_line):
+    g = re.match(r".*?((\w+\.)*\w+)$", chopped_line).groups()
+    return g[0]
+
+
 def modules_to_search(source, line, col, identifier):
     """
     given the identifier, give list of module names that you should
     search in for the symbol
-    """
-    """
-    source = exposing
-    line = 8
-    col = 10
-    identifier = 'join'
     """
 
     # check if identifier is qualified, if it's
@@ -124,7 +126,7 @@ def modules_to_search(source, line, col, identifier):
         raise
     if just_before_id == ".":
         until = source.split("\n")[line][:col - 1]
-        module = re.match(r"^.*?(\w*)$", until).groups()[0]
+        module = _module_name_at_end_of(until)
         log.debug("searching qualified import")
         log.debug([module])
         return [module]
@@ -294,7 +296,7 @@ def main():
     # path = "src/Seeker.elm"
     # print(find_location(".", path, 17, 18, "test"))
     print(" ".join(
-        map(str, find_location(cwd, path, int(row), int(col), identifier))
+        map(str, ["MATCH"] + find_location(cwd, path, int(row), int(col), identifier))
     ))
 
 
