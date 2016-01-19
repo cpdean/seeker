@@ -246,6 +246,34 @@ def test_query_string_when_exposing_qualified():
 
 
 @pytest.mark.parametrize(
+    "line,input,expected", [
+        ("import String", "String", "String"),
+        ("import String as Derp", "Derp", "String"),
+        ("import Nested.Module as Derp", "Derp", "Nested.Module"),
+        ("import RenameAndExpose exposing (whatever, blah) as Whoa", "Whoa", "RenameAndExpose"),  # NOQA
+        ("import RenameAndExpose exposing (single) as Whoa", "Whoa", "RenameAndExpose"),  # NOQA
+    ])
+def test_module_alias_check(line, input, expected):
+    assert seeker._aliased_module_regex(input)(line) == expected
+
+
+aliased = """
+import List
+import String as Derp
+
+splitter : String -> List String
+splitter = String.split " "
+
+b : String -> String
+b input = Derp.join "." (splitter input)
+"""
+
+
+def test_module_lister_works_when_module_aliased():
+    assert seeker.modules_to_search(aliased, 8, 15, "join") == ["String"]
+
+
+@pytest.mark.parametrize(
     "chopped,expected", [
         ("regular name String", "String"),
         ("nested ElmTest.Assertion", "ElmTest.Assertion"),

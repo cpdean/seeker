@@ -103,6 +103,47 @@ def _module_name_at_end_of(chopped_line):
     return g[0]
 
 
+def _aliased_module_regex(module_name):
+    """
+    i curry stuff like this so i can test it
+    in isolation
+    """
+    regular_import = r'^import ({})'.format(module_name)
+    aliased = r'^import ([\w.]+) as {}'.format(module_name)
+    exposing = r'^import ([\w.]+) exposing \([\w, ]+\) as {}'.format(module_name)  # NOQA
+    together = r'|'.join((
+        regular_import,
+        aliased,
+        exposing
+    ))
+    _r = re.compile(together)
+
+    def f(line):
+        m = _r.match(line)
+        if m:
+            # you only match one of the sub patterns...
+            # leap of faith:
+            return [i for i in m.groups() if i][0]
+        else:
+            return m
+    return f
+
+
+def _module_from_alias(source, module_name):
+    """
+    search the source for the original name of a module
+    if it was aliased.  if the module is instead simply found,
+    return that.
+    """
+    regular_or_aliased = _aliased_module_regex(module_name)
+    _search = [regular_or_aliased(i) for i in source.split("\n")]
+    matches = [i for i in _search if i is not None]
+    assert len(matches) == 1, ("only mode module name "
+                               "should match '{}', instead "
+                               "found: {}".format(module_name, [i.string for i in matches]))  # NOQA
+    return matches[0]
+
+
 def modules_to_search(source, line, col, identifier):
     """
     given the identifier, give list of module names that you should
@@ -112,9 +153,6 @@ def modules_to_search(source, line, col, identifier):
     # check if identifier is qualified, if it's
     # like "String.join" instead of just "join"
     lines = source.split("\n")
-    log.debug("why the hell does this not have it")
-    for i, lin in enumerate(lines[line-5:line+5]):
-        log.debug("{} : |{}".format(i - 5, lin))
     line_of_id = lines[line]
     try:
         just_before_id = line_of_id[col - 1]
@@ -129,9 +167,10 @@ def modules_to_search(source, line, col, identifier):
     if just_before_id == ".":
         until = source.split("\n")[line][:col - 1]
         module = _module_name_at_end_of(until)
+        imported_name = _module_from_alias(source, module)
         log.debug("searching qualified import")
-        log.debug([module])
-        return [module]
+        log.debug([imported_name])
+        return [imported_name]
     # search for explicit import
     importers = [_imports_function(i, identifier) for i in source.split("\n")]
     modules = [i.groups()[0] for i in importers if i]
@@ -295,10 +334,8 @@ def main():
         print("USAGE: seeker CWD FILE ROW COLUMN IDENTIFIER")
         print("you gave {}".format(sys.argv[1:]))
         exit(1)
-    # path = "src/Seeker.elm"
-    # print(find_location(".", path, 17, 18, "test"))
     print(" ".join(
-        map(str, ["MATCH"] + find_location(cwd, path, int(row), int(col), identifier))
+        map(str, ["MATCH"] + find_location(cwd, path, int(row), int(col), identifier))  # NOQA
     ))
 
 
