@@ -48,6 +48,8 @@ def test_find_when_def_has_arg():
         'splitter s a = String.split " " s a',
         'splitter more a = String.split " " more a',
         'splitter more a third = String.split " " more a third',
+        'splitter {you, can, do, this} = String.split " "',
+        'splitter {single} = String.split " "',
     ])
 def test_indentifier_searcher(line):
     """

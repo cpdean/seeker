@@ -16,7 +16,9 @@ class SearchError(Exception):
 
 
 def _id_regex_from(identifier):
-    _regex = re.compile(identifier + r"\s+(\w+\s)*=")
+    regular = identifier + r"\s+(\w+\s)*="
+    weird_record_based = r"\s+\{\w+(,\s+\w+)*\}\s+="
+    _regex = re.compile(r'|'.join([regular, weird_record_based]))
 
     def fn(line):
         return _regex.search(line)

@@ -13,9 +13,6 @@ CLASSIFIERS = [
 ]
 
 __version__ = "0.0.1"
-requires = [
-    "click==6.2"
-]
 
 tests_require = [
     "pytest==2.8.5"
@@ -31,7 +28,6 @@ dist = setup(
     author="Conrad Dean",
     author_email="conrad.p.dean@gmail.com",
     packages=find_packages(),
-    install_requires=requires,
     tests_require=tests_require,
     include_package_data=True,
     zip_safe=False,
