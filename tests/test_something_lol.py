@@ -372,3 +372,49 @@ def test_mask_comments():
     b input = join "." (splitter input)
     """
     assert seeker._mask_comments(before) == after
+
+
+def test_dunno():
+    """
+    regression: on this code sample the function def finder is
+    overmatching on a bunch of things.
+
+    also looks like i need to do some more testing around
+    type and type alias defs
+    """
+    current_gripe = """
+type alias Index doc = Model.Index doc
+type alias Config doc = Model.Config doc
+type alias SimpleConfig doc = Model.SimpleConfig doc
+
+
+{-| Create new index.
+-}
+new : SimpleConfig doc -> Index doc
+new simpleConfig  =
+    newWith
+      (Defaults.getDefaultIndexConfig simpleConfig)
+
+
+{-| Create new index with control of transformers and filters.
+-}
+newWith : Config doc -> Index doc
+newWith {indexType, ref, fields, transformFactories, filterFactories} =
+    Index
+      { indexVersion = Defaults.indexVersion
+      , indexType = indexType
+      , ref = ref
+      , fields = fields
+      , transformFactories = transformFactories
+      , filterFactories = filterFactories
+
+      , transforms = Nothing
+      , filters = Nothing
+      , corpusTokens = Set.empty
+      , corpusTokensIndex = Dict.empty
+      , documentStore = Dict.empty
+      , tokenStore = Trie.empty
+      , idfCache = Dict.empty
+      }
+    """
+    seeker.find_location_in_source(current_gripe, 18, 4, "Index")
