@@ -60,6 +60,13 @@ def test_indentifier_searcher(line):
     assert bool(match) is True
 
 
+def test_type_alias_matches():
+    line = 'type alias Index doc = Model.Index doc'
+    identifier = "Index"
+    match = seeker._id_regex_from(identifier)(line)
+    assert bool(match) is True
+
+
 too_many = """
 import List
 import String
@@ -374,7 +381,21 @@ def test_mask_comments():
     assert seeker._mask_comments(before) == after
 
 
-def test_dunno():
+@pytest.mark.parametrize(
+    "line", [
+        'newWith {indexType, ref, fields, transformFactories, filterFactories} =',  # NOQA
+        '      , corpusTokensIndex = Dict.empty'
+    ])
+def test_regarding_my_current_gripe_none_should_match(line):
+    """
+    let's hope this doesn't match on let blocks, lol
+    """
+    identifier = "Index"
+    match = seeker._id_regex_from(identifier)(line)
+    assert bool(match) is False
+
+
+def xtest_dunno():
     """
     regression: on this code sample the function def finder is
     overmatching on a bunch of things.
