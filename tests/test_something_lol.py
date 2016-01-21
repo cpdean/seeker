@@ -60,8 +60,37 @@ def test_indentifier_searcher(line):
     assert bool(match) is True
 
 
+@pytest.mark.parametrize(
+    "line",
+    [
+        'splitter = String.split " "',
+        'splitter s = String.split " " s',
+        'splitter whatabout = String.split " " whatabout',
+        'splitter s a = String.split " " s a',
+        'splitter more a = String.split " " more a',
+        'splitter more a third = String.split " " more a third',
+        'splitter {you, can, do, this} = String.split " "',
+        'splitter {single} = String.split " "',
+    ])
+def test_non_matches_dont_match(line):
+    """
+    had a bad regex that was overmatching, so test that some things
+    do not match
+    """
+    identifier = "wowgoats"
+    match = seeker._id_regex_from(identifier)(line)
+    assert bool(match) is False
+
+
 def test_type_alias_matches():
     line = 'type alias Index doc = Model.Index doc'
+    identifier = "Index"
+    match = seeker._id_regex_from(identifier)(line)
+    assert bool(match) is True
+
+
+def test_type_matches():
+    line = 'type Index doc = Model.Index doc'
     identifier = "Index"
     match = seeker._id_regex_from(identifier)(line)
     assert bool(match) is True
@@ -393,49 +422,3 @@ def test_regarding_my_current_gripe_none_should_match(line):
     identifier = "Index"
     match = seeker._id_regex_from(identifier)(line)
     assert bool(match) is False
-
-
-def xtest_dunno():
-    """
-    regression: on this code sample the function def finder is
-    overmatching on a bunch of things.
-
-    also looks like i need to do some more testing around
-    type and type alias defs
-    """
-    current_gripe = """
-type alias Index doc = Model.Index doc
-type alias Config doc = Model.Config doc
-type alias SimpleConfig doc = Model.SimpleConfig doc
-
-
-{-| Create new index.
--}
-new : SimpleConfig doc -> Index doc
-new simpleConfig  =
-    newWith
-      (Defaults.getDefaultIndexConfig simpleConfig)
-
-
-{-| Create new index with control of transformers and filters.
--}
-newWith : Config doc -> Index doc
-newWith {indexType, ref, fields, transformFactories, filterFactories} =
-    Index
-      { indexVersion = Defaults.indexVersion
-      , indexType = indexType
-      , ref = ref
-      , fields = fields
-      , transformFactories = transformFactories
-      , filterFactories = filterFactories
-
-      , transforms = Nothing
-      , filters = Nothing
-      , corpusTokens = Set.empty
-      , corpusTokensIndex = Dict.empty
-      , documentStore = Dict.empty
-      , tokenStore = Trie.empty
-      , idfCache = Dict.empty
-      }
-    """
-    seeker.find_location_in_source(current_gripe, 18, 4, "Index")
