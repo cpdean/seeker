@@ -57,29 +57,27 @@ def find_location(path, source_path, line, col, identifier):
         source = s.read()
     this_line = source.split("\n")[line]
     assert identifier in this_line, "{} should be in '{}'".format(identifier, this_line)  # NOQA
-    # changed this to search external first
-    # because of :
-    # module_fn = ExternalMod.module_fn
-    modules = modules_to_search(source, line, col, identifier)
-    for m in modules:
-        log.debug("looking for path to {}".format(m))
-        paths = files_of(m, path)
-        for p in paths:
-            log.debug("checking {}".format(p))
-            with open(p) as m:
-                try:
-                    row, col = find_location_in_source(
-                        m.read(), line, col, identifier
-                    )
-                    return [p, row, col]
-                except CannotFindIdentifier:
-                    print("could not find in {}".format(p))
-    if len(modules) == 0:
+    try:
         log.debug("looking in the file function is used in")
         row, col = find_location_in_source(source, line, col, identifier)
         return [source_path, row, col]
-    raise CannotFindIdentifier(
-        "could not find {} in here".format(identifier))
+    except CannotFindIdentifier:
+        modules = modules_to_search(source, line, col, identifier)
+        for m in modules:
+            log.debug("looking for path to {}".format(m))
+            paths = files_of(m, path)
+            for p in paths:
+                log.debug("checking {}".format(p))
+                with open(p) as m:
+                    try:
+                        row, col = find_location_in_source(
+                            m.read(), line, col, identifier
+                        )
+                        return [p, row, col]
+                    except CannotFindIdentifier:
+                        log.debug("could not find in {}".format(p))
+        raise CannotFindIdentifier(
+            "could not find {} in here".format(identifier))
 
 
 def _imports_function(line, identifier):
@@ -95,7 +93,7 @@ def _imports_function(line, identifier):
 
 
 def _wildcard_import(line):
-    return re.match(r"^import (\w+) exposing \(\.\.\)", line)
+    return re.match(r"^import ((\w+\.)*\w+) exposing \(\.\.\)", line)
 
 
 def _module_name_at_end_of(chopped_line):

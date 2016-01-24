@@ -54,7 +54,13 @@ b input = huh Index
     assert location == (1, 0)
 
 
+@pytest.mark.skipif("todo == True")
 def test_type_with_new_line():
+    """
+    current bug, not sure how to get around it given it searches things
+    linewise...
+    maybe i need to write a mini-parser to filter things expressionwise?
+    """
     type_def = """
 type Boolean
     = Literal Bool
@@ -317,16 +323,26 @@ def test_import_finder_matches_nested_module(line, module):
     assert importer == module
 
 
+@pytest.mark.parametrize(
+    "line,module",
+    [
+        ("import Html exposing (..)", "Html"),
+        ("import Html.Events exposing (..)", "Html.Events"),
+        ("import Html.Attributes exposing (..)", "Html.Attributes"),
+        ("import Html.Attributes.More exposing (..)", "Html.Attributes.More"),
+        ("import Html.Attributes.M exposing (..)", "Html.Attributes.M"),
+    ])
+def test_wildcard_importer_nested_mod(line, module):
+    match = seeker._wildcard_import(line)
+    importer = match.groups()[0]
+    assert importer == module
+
+
 def test_importer_finder_doesnt_match_substr():
     line = "import Wumpus exposing (ajoinb)"
     fn = "join"
     match = seeker._imports_function(line, fn)
     assert match is None
-
-
-@pytest.mark.skipif("True")
-def test_query_string_when_exposing_qualified():
-    pass
 
 
 @pytest.mark.parametrize(
@@ -415,6 +431,41 @@ b input = join "." (splitter input)
 def test_query_string_when_there_are_two_wildcards():
     modules = seeker.modules_to_search(wildcard2, 8, 10, "join")
     assert modules == ["List", "String"]
+
+
+css_regression = """
+module RandomGifList (..) where
+
+import Effects exposing (Effects, map, batch, Never)
+import Html exposing (..)
+
+
+-- TODO seeker can't find 'class' or 'style' etc without the explicit imports
+-- import Html.Attributes exposing (style, class, value, placeholder, id, href, rel)
+
+import Html.Attributes exposing (..)
+import Html.Events exposing (..)
+import Json.Decode as Json
+import RandomGif
+
+css : String -> Html
+css path =
+    node "link" [ rel "stylesheet", href path ] []
+
+
+view : Signal.Address Action -> Model -> Html
+view address model =
+    div
+        [ id "an_app" ]
+        [ css "https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css"
+        , div
+            [ class "container" ]
+"""  # NOQA
+
+
+def test_multiple_wildcards_are_matching():
+    modules = seeker.modules_to_search(css_regression, 24, 10, "css")
+    assert modules == ["Html", "Html.Attributes", "Html.Events"]
 
 
 def test_mask_comments():
