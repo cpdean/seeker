@@ -85,7 +85,7 @@ def find_location(path, source_path, line, col, identifier):
 def _imports_function(line, identifier):
     return re.match(
         (
-            r"^import (\w+) exposing "
+            r"^import ((\w(\.\w+)*)+) exposing "
             r"\([\w, ]*"  # zero or more character/space/commas
             r"\b{}\b"  # the thing we're looking for
             r"[\w, ]*\)"  # zero or more other fns

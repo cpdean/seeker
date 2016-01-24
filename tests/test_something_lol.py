@@ -265,8 +265,26 @@ def test_module_lister_works_with_exposed():
 def test_importer_finder(line):
     fn = "join"
     match = seeker._imports_function(line, fn)
-    importer, = match.groups()
+    print(match.groups())
+    importer = match.groups()[0]
     assert importer == "String"
+
+
+@pytest.mark.parametrize(
+    "line,module",
+    [
+        ("import Graphics exposing (show)", "Graphics"),
+        ("import Graphics.Element exposing (show)", "Graphics.Element"),
+        ("import Graphics.Element.More exposing (show)", "Graphics.Element.More"),  # NOQA
+        ("import Graphics.Element exposing (Element, show)", "Graphics.Element"),  # NOQA
+        ("import Graphics.Element exposing (show, Element)", "Graphics.Element"),  # NOQA
+        ("import Graphics.Element exposing (show, Element, blah)", "Graphics.Element"),  # NOQA
+    ])
+def test_import_finder_matches_nested_module(line, module):
+    fn = "show"
+    match = seeker._imports_function(line, fn)
+    importer = match.groups()[0]
+    assert importer == module
 
 
 def test_importer_finder_doesnt_match_substr():
