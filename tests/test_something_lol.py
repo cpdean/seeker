@@ -39,6 +39,36 @@ def test_find_when_def_has_arg():
     assert location == (5, 0)
 
 
+def test_type_alias_with_new_line():
+    type_def = """
+type alias Index =
+    { x : Float
+    , y : Float
+    , radius : Float
+    }
+
+b : String -> String
+b input = huh Index
+"""
+    location = seeker.find_location_in_source(type_def, 8, 14, "Index")
+    assert location == (1, 0)
+
+
+def test_type_with_new_line():
+    type_def = """
+type Boolean
+    = Literal Bool
+    | Not Boolean
+    | And Boolean Boolean
+    | Or Boolean Boolean
+
+b : String -> String
+b input = huh Boolean
+"""
+    location = seeker.find_location_in_source(type_def, 8, 14, "Boolean")
+    assert location == (1, 0)
+
+
 @pytest.mark.parametrize(
     "line",
     [
