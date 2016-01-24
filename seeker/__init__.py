@@ -323,19 +323,37 @@ def _mask_comments(src):
     return "".join(out)
 
 
+def arg_parser():
+    import argparse
+    p = argparse.ArgumentParser(
+        description="Find the definition of an elm function"
+    )
+    p.add_argument("cwd", metavar="CURRENT_DIR", type=str,
+                   help="dir of elm project")
+    p.add_argument("file", metavar="FILE", type=str,
+                   help="path to file function is used in")
+    p.add_argument("row", metavar="ROW", type=int)
+    p.add_argument("col", metavar="COLUMN", type=int)
+    p.add_argument("identifier", metavar="IDENTIFIER", type=str,
+                   help="name of thing you're looking for")
+    p.add_argument("-d", "--debug", dest="debug",
+                   const=True, default=False, action="store_const",
+                   help="turn on debug logging")
+    return p
+
+
 def main():
-    debug = False
+    args = arg_parser().parse_args()
+    cwd = args.cwd
+    path = args.file
+    row = args.row
+    col = args.col
+    identifier = args.identifier
+    debug = args.debug
     level = logging.DEBUG if debug else logging.ERROR
     logging.basicConfig(level=level)
-    import sys
-    try:
-        bin, cwd, path, row, col, identifier = sys.argv
-    except ValueError:
-        print("USAGE: seeker CWD FILE ROW COLUMN IDENTIFIER")
-        print("you gave {}".format(sys.argv[1:]))
-        exit(1)
     print(" ".join(
-        map(str, ["MATCH"] + find_location(cwd, path, int(row), int(col), identifier))  # NOQA
+        map(str, ["MATCH"] + find_location(cwd, path, row, col, identifier))
     ))
 
 
