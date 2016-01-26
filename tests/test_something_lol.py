@@ -373,6 +373,10 @@ def test_module_lister_works_when_module_aliased():
     assert seeker.modules_to_search(aliased, 8, 15, "join") == ["String"]
 
 
+def test_function_is_qualified():
+    assert seeker._qualified_namespace(aliased, 8, 15, "join") == ["String"]
+
+
 @pytest.mark.parametrize(
     "chopped,expected", [
         ("regular name String", "String"),
@@ -381,6 +385,17 @@ def test_module_lister_works_when_module_aliased():
     ])
 def test_name_getter(chopped, expected):
     assert seeker._module_name_at_end_of(chopped) == expected
+
+
+@pytest.mark.parametrize(
+    "inpath,package",
+    [
+        ("/Users/conrad/dev/elm-commithero/elm-stuff/packages/evancz/elm-html/4.0.2/src/Html/Events.elm",  # NOQA
+         "/Users/conrad/dev/elm-commithero/elm-stuff/packages/evancz/elm-html/4.0.2/elm-package.json"),  # NOQA
+    ]
+)
+def test_package_path_getter(inpath, package):
+    assert seeker._elm_package_for(inpath) == package
 
 
 @pytest.mark.skipif("todo == True")
