@@ -384,7 +384,10 @@ def test_name_getter(chopped, expected):
          "/Users/conrad/dev/elm-commithero/elm-stuff/packages/evancz/elm-html/4.0.2/elm-package.json"),  # NOQA
     ]
 )
-def test_package_path_getter(inpath, package):
+def test_package_path_getter(inpath, package, monkeypatch):
+    import os
+    exists = lambda x: x.endswith("elm-html/4.0.2/elm-package.json")
+    monkeypatch.setattr(os.path, "exists", exists)
     assert seeker._elm_package_for(inpath) == package
 
 
