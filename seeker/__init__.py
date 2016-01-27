@@ -76,6 +76,7 @@ def find_location(path, source_path, line, col, identifier):
         row, col = find_location_in_source(source, line, col, identifier)
         return [source_path, row, col]
     except CannotFindIdentifier:
+        # TODO: this might be totally redundant
         modules = modules_to_search(source, line, col, identifier)
         for m in modules:
             log.debug("looking for path to {}".format(m))
@@ -212,45 +213,12 @@ def dependencies(package_json):
     return [tuple(p.split("/")) for p in packages]
 
 
-def modules_of(package_json):
-    modules = package_json['exposed-modules']
-    return modules
-
-
-def imported_packages(source):
-    import_line_regex = re.compile(r"^import\s+(\w+)")
-    import_lines = [import_line_regex.match(i) for i in source.split("\n")]
-    return [p.groups()[0] for p in import_lines if p]
-
-
 def get_package_json(path):
     """
     get elm-package.json as a dict
     """
     with open(os.path.join(path, "elm-package.json")) as p:
         return json.loads(p.read())
-
-
-def modules_of_this_project():
-    """
-    """
-    with open("./elm-package.json") as p:
-        root = json.loads(p.read())
-        modules = root["exposed-modules"]
-        for author, package in dependencies(root):
-            p_path = os.path.join(
-                "elm-stuff",
-                "packages",
-                author,
-                package,
-            )
-            versions = os.listdir(p_path)
-            path_to_package_json = os.path.join(
-                p_path, versions[0], "elm-package.json"
-            )
-            with open(path_to_package_json) as dependency:
-                modules += modules_of(json.loads(dependency.read()))
-        return modules
 
 
 def dependency_roots(dir, is_dependency=False):
@@ -283,104 +251,6 @@ def _elm_package_for(file_path):
         current_guess = "/" + os.path.join(*guess_parts)
         if os.path.exists(current_guess):
             return current_guess
-
-
-def _packages_this_package_depends_on(path_to_elm_package_json,
-                                      dependency_list):
-    """
-    for a given elm package json, dependent packages
-    """
-    packages_dir = "elm-stuff/packages"
-    is_top_level = packages_dir not in path_to_elm_package_json
-    if is_top_level:
-        top = path_to_elm_package_json.split("elm-package.json")[0]
-    else:
-        top = path_to_elm_package_json.split(packages_dir)[0]
-    dependencency_dir = os.path.join(top, packages_dir)
-    dependent_packages = []
-    for author, package in dependency_list:
-        p_path = os.path.join(
-            dependencency_dir,
-            author,
-            package,
-        )
-        versions = os.listdir(p_path)
-        path_to_package_json = os.path.join(
-            p_path, versions[0], "elm-package.json"
-        )
-        with open(path_to_package_json) as f:
-            this_package = json.loads(f.read())
-        dependent_packages.append((path_to_package_json, this_package))
-    return dependent_packages
-
-
-def _module_paths_of(path_to_package_json, package_dict):
-    """
-    lookup dict of {"module name": "path to module"} of
-    modules exposed by this package
-    """
-    package_path = path_to_package_json.split("elm-package.json")[0]
-    exposed = package_dict["exposed-modules"]
-    src_dirs = package_dict["source-directories"]
-    those = itertools.product(src_dirs, exposed)
-    modules = dict()
-    for src, module in those:
-        module_parts = module.split(".")
-        module_path = os.path.join(package_path, src, *module_parts) + ".elm"
-        if os.path.exists(module_path):
-            modules[module] = module_path
-    return modules
-
-
-def _importable_modules(path_to_elm_package_json):
-    """
-    get a dict of {"module name": "file of module", ...} for a given
-    elm-package.json
-    """
-
-    """
-    is_top_level = "elm-stuff/packages" not in path_to_elm_package_json
-    with open(path_to_elm_package_json) as p:
-        elm_package_info = json.loads(p.read())
-    dependency_list = dependencies(elm_package_info)
-    dependent_packages = _packages_this_package_depends_on(path_to_package_json, dependency_list)
-    mods_on_path = [_module_paths_of(p, d) for p, d in dependent_packages]
-
-    # ASSUMPTION: you're only allowed to import what your dependencies export
-    """  # NOQA
-
-
-def _trash_file_of(module, found_in_file):
-    """
-    :param module:  name of the module to look for
-    :param found_in_file: path to the file that imports the module
-    :return: path to file that defines the module
-
-    this part in particular required a very extensive rewrite due to the types
-    of cases that have to be handled:
-
-     1. its in the project, module is defined in project so it traverses into a
-        private mod of the project source,
-     2. its in the project, but the module is an exposed mod of a dependency of
-        the project,
-     3. it's in a dependent module, and must traverse to one of the private
-        modules of that dependency
-     4. its in a dependent module, and most traverse into one of ITS
-        dependencies, which will sit in a sibling locaiton
-
-    """
-    """
-    # figure out if the module is being imported from a function in
-    # the project or in the dependencies dir
-    # for path to file, find elm-package.json that supports it
-    packages_dir = "elm-stuff/packages"
-    is_top_level = packages_dir not in path_to_elm_package_json
-    elm_package_path = _elm_package_for(found_in_file)
-    with open(elm_package_path) as p:
-        elm_package_info = json.loads(p.read())
-    # in elm-package.json module list, make sure it has the named module
-    # now search for named module in all the listed source paths
-    """
 
 
 def _files_of(module, found_in_file):
@@ -437,39 +307,6 @@ def _find_module_definition(module_name, source_dirs):
         log.debug("looking for {} in {}".format(module_name, definition_file))
         if os.path.exists(definition_file):
             paths.append(definition_file)
-    return paths
-
-
-def files_of(module, package_root, depth=1):
-    """
-    for a given module name, return the path to the file
-
-    problems: i am looking for a module only defined local to
-              a project, how do i return a path that makes sense from
-              where i am searching.
-    """
-    package_json = get_package_json(package_root)
-    sources = [
-        os.path.join(package_root, s)
-        for s in package_json["source-directories"]
-    ]
-    log.debug("searching for module in {}".format(sources))
-    paths = _files_of(module, sources)
-    if depth > 0:
-        # TODO: could probably just do a set() compression at
-        #       the end but whatever
-        for dep_path in dependency_roots(package_root):
-            module_paths = files_of(module, dep_path, depth=depth-1)
-            paths += module_paths
-    if len(paths) > 1:
-        raise RuntimeError("too many matches!!! :((((: {}".format(paths))
-    if len(paths) == 0:
-        raise RuntimeError(
-            "could not find path to module {} in package root {}".format(
-                module,
-                package_root
-            )
-        )
     return paths
 
 
