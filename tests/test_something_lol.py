@@ -231,16 +231,6 @@ def test_get_dependencies_of_project(tmpdir):
     ]
 
 
-def test_get_modules_of_package(tmpdir):
-    assert seeker.modules_of(json.loads(package_json)) == [
-        "Seeker"
-    ]
-
-
-def test_get_imported_packages():
-    assert seeker.imported_packages(regular) == ["List", "String"]
-
-
 def get_file_path_to_module():
     """
     for a given module name in a project, traverse through
@@ -536,3 +526,12 @@ def test_regarding_my_current_gripe_none_should_match(line):
     identifier = "Index"
     match = seeker._id_regex_from(identifier)(line)
     assert bool(match) is False
+
+
+def test_source_finder_for_module(monkeypatch):
+    import os
+    exists = lambda x: x == "/code/project/src/Goat/Finder.elm"
+    monkeypatch.setattr(os.path, "exists", exists)
+    src = ["/code/project/src", "/something/else"]
+    p = seeker._find_module_definition("Goat.Finder", src)
+    assert p == ["/code/project/src/Goat/Finder.elm"]
