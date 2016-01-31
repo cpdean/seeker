@@ -120,9 +120,9 @@ def _aliased_module_regex(module_name):
     i curry stuff like this so i can test it
     in isolation
     """
-    regular_import = r'^import ({})'.format(module_name)
-    aliased = r'^import ([\w.]+) as {}'.format(module_name)
-    exposing = r'^import ([\w.]+) exposing \([\w, ]+\) as {}'.format(module_name)  # NOQA
+    regular_import = r'^import ({})$'.format(module_name)
+    aliased = r'^import ([\w.]+) as {}$'.format(module_name)
+    exposing = r'^import ([\w.]+) exposing \([\w, ]+\) as {}$'.format(module_name)  # NOQA
     together = r'|'.join((
         regular_import,
         aliased,

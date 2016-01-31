@@ -342,6 +342,7 @@ def test_importer_finder_doesnt_match_substr():
         ("import Nested.Module as Derp", "Derp", "Nested.Module"),
         ("import RenameAndExpose exposing (whatever, blah) as Whoa", "Whoa", "RenameAndExpose"),  # NOQA
         ("import RenameAndExpose exposing (single) as Whoa", "Whoa", "RenameAndExpose"),  # NOQA
+        ("import Json.Decode as Json", "Json", "Json.Decode"),
     ])
 def test_module_alias_check(line, input, expected):
     assert seeker._aliased_module_regex(input)(line) == expected
