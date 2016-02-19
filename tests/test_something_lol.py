@@ -132,6 +132,30 @@ def test_type_matches():
     assert bool(match) is True
 
 
+def test_type_proper_format():
+    """
+    technically, types look like this:
+
+        type Donkey
+          = Mule
+          | Horse
+          | Goat
+
+    not like this:
+
+        type Donkey =
+            Mule
+          | Horse
+          | Goat
+
+    and so it should just match it wihtout the equals sign
+    """
+    line = 'type Donkey'
+    identifier = "Donkey"
+    match = seeker._id_regex_from(identifier)(line)
+    assert bool(match) is True
+
+
 too_many = """
 import List
 import String
@@ -539,3 +563,34 @@ def test_source_finder_for_module(monkeypatch):
     src = ["/code/project/src", "/something/else"]
     p = seeker._find_module_definition("Goat.Finder", src)
     assert p == ["/code/project/src/Goat/Finder.elm"]
+
+with_type = """
+type Donkey
+  = Mule
+  | Horse
+  | Goat
+
+
+goatifier : Donkey -> Int
+goatifier g =
+  case g of
+    Mule ->
+      0
+
+    Horse ->
+      1
+
+    Goat ->
+      2
+
+
+doubleGoater : Donkey -> Int
+doubleGoater =
+  goatifier <| goatifier
+
+"""
+
+
+def test_find_type():
+    location = seeker.find_location_in_source(with_type, 7, 13, "Donkey")
+    assert location == (1, 0)
